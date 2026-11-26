@@ -46,7 +46,7 @@
 | `parts[].id` | 乐部 ID；例如钢琴一个乐部含两个谱表 |
 | `staves[].id/index` | 全曲唯一谱表 ID；每乐部 index 从 1 连续编号 |
 | `staves[].clef` | `treble`、`bass`、`alto`、`tenor` |
-| `measures[].id/number` | 内部唯一小节 ID 和展示编号；弱起编号可为 0 |
+| `measures[].id/number` | 内部唯一小节 ID 和源谱小节编号；弱起编号可为 0。应用显示与 A–B 选择采用展开后的演奏编号 |
 | `time_signature` | 当前小节的拍号，默认 4/4；每个小节明确保存，避免生产端隐式状态歧义 |
 | `key_signature_fifths` | 调号的五度数：0 为无升降号，1 为一个升号，−1 为一个降号 |
 | `tempo_bpm` | **四分音符每分钟**；省略时继承源谱前一小节末尾速度，整曲初始默认 80 |

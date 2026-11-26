@@ -20,9 +20,25 @@
 
 首个代码提交 `4bfb6f4` 已从 GitHub 全新克隆，用仓库自带 Wrapper 完成全部构建、当时的 39 项单元测试及 Lint，验证仓库包含可恢复的完整构建输入。后续版本继续核对本地与远程 Git 文件树，并由 GitHub Actions 使用仓库内 Wrapper 构建。
 
+## GitHub Actions 构建
+
+功能提交 [`ef3fe9c`](https://github.com/wolf111108/OpenMusic/commit/ef3fe9ccc30d2e70af32fe0a85ed46fddefe34a5) 的 [工作流 45877033615](https://github.com/wolf111108/OpenMusic/actions/runs/45877033615) 已完成远程构建。报告确认核心 21 项和 Android 本地 29 项测试全部通过，debug APK 与测试 APK 均生成成功，最终 APK 对齐检查通过。
+
+远程 Lint 为 **0 个错误、10 个提示**：`OldTargetApi` 1 项、`AndroidGradlePluginVersion` 1 项和 `GradleDependency` 8 项。后两类来自联网检查可更新的依赖版本；本次交付保留已经构建和测试的固定版本。
+
+工作流提供 `OpenMusic-debug-apk` 和 `local-test-reports` 构建产物，可在运行页面下载。测试报告归档下载后已核对 SHA-256，并检查其中的测试汇总与 Lint XML。
+
 ## Android 运行检查
 
-`SmokeTest` 提供 3 条真实 Activity 与原生渲染器检查。运行需要 Android 设备或带硬件加速的模拟器；当前本地构建环境没有可用 KVM。GitHub Actions 的 Android 15 / API 35 模拟器任务负责运行这些检查，并上传截图及日志；编译阶段使用 Platform 36。检查包含全部 53 个样例音符、双手谱面可见区域、横竖屏记谱切换、游标推进与暂停，以及横竖屏测试键盘触摸输入。对应提交的远程编译和运行状态见 [Actions](https://github.com/wolf111108/OpenMusic/actions)。
+同一功能提交 `ef3fe9c` 的 `android-smoke` 任务已在 Android 15 / API 35、Pixel 6 配置的 x86_64 模拟器上完成，**3 项检查全部通过，0 个失败、0 个跳过**：
+
+1. 加载原创双手谱，核对全部 53 个音符，切换五线谱与简谱，并检查横竖屏的原生谱面实际可见区域。
+2. 启动示范，确认原生游标前进，再验证暂停状态。
+3. 在设备页发送真实触摸按下／松开事件，使用测试键盘在横竖屏「弹对前进」模式中推进目标音。
+
+已下载并核对 `android-smoke-results` 归档的 SHA-256，读取 JUnit XML、谱面测量记录并人工查看截图。横屏简谱首小节高约 664.9 px，视口高 680 px，首小节和四条音线的可见比例均为 100%；低音 C3 显示一个下加点。截图前后的前台窗口均由测试检查，本轮没有遮挡窗口或恢复记录。
+
+仓库中的 [横屏简谱](screenshots/landscape-numbered.png) 与 [竖屏五线谱](screenshots/portrait-staff.png) 直接复制自该次运行的原始 PNG。归档 ID 为 `15146685538`，SHA-256 为 `ebca0f6de859da120bc83d08f5847081ad9222e9021dd629c7ea492452ee4d1a`。本地构建环境没有可用 KVM，运行验证由上述 GitHub Actions 模拟器完成；编译阶段使用 Platform 36。
 
 ## 硬件与环境边界
 

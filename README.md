@@ -20,6 +20,12 @@
 
 本版直接消费 **ScoreIR 0.1.0**。它是本项目定义的版本化中间格式；PDF、JPG、OCR、AI 识谱、音频转谱和原始 MusicXML／MIDI 文件导入属于后续生产端。未来转换工具按 [ScoreIR 导入契约](docs/scoreir.md) 输出即可接入。吉他、长笛等实音乐谱可以用于跟谱练习，专用指法、六线谱及麦克风识音需要后续扩展。
 
+## 运行截图
+
+Android 15 模拟器的实际运行画面，对应已通过构建与运行检查的功能提交 `ef3fe9c`。测试过程及结果见 [验证记录](docs/verification.md)，另有 [竖屏五线谱截图](docs/screenshots/portrait-staff.png)。
+
+![手机横屏：双手简谱、节拍游标与练习控制](docs/screenshots/landscape-numbered.png)
+
 ## Windows 快速开始
 
 1. 安装 Git、[Android Studio](https://developer.android.com/studio) 和 JDK 17。Android Studio 自带的兼容 JBR 也可用于运行构建；源码字节码目标为 Java 17。
