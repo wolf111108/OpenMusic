@@ -13,8 +13,8 @@ import alphaTab.model.Voice
 import kotlin.math.abs
 
 /**
- * alphaTab 1.6.1's NumberedBarRenderer draws only voice 0, and NumberedBeatGlyph
- * draws only notes[0]. Expand the engraving model into aligned monophonic staves
+ * alphaTab's numbered renderer draws only voice 0 and one pitch per beat.
+ * Expand the engraving model into aligned monophonic staves
  * so chords and secondary voices remain visible. The practice/audio score is untouched.
  *
  * Use the public JSON round-trip API to preserve notation and explicit tie references.

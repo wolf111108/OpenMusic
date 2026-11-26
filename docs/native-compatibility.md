@@ -1,13 +1,18 @@
 # 原生渲染依赖与 16 KB 页面检查
 
-OpenMusic 保留 `net.alphatab:alphaTab:1.6.1`，并显式固定其渲染依赖：
+OpenMusic 使用官方发布的 `net.alphatab:alphaTab:1.8.4`，并显式固定其渲染依赖：
 
 ```kotlin
+implementation("net.alphatab:alphaTab:1.8.4")
 implementation("net.alphatab:alphaSkia-android:3.5.147")
 implementation("net.alphatab:alphaSkia:3.5.147")
 ```
 
-这两项需要一起更新，确保 Java 包装层与 JNI 库属于同一版本。alphaTab 1.6.1 原本传递依赖的 alphaSkia 3.4.135，其 64 位 ELF 仅按 4 KB 对齐；修改 APK 的 ZIP 对齐无法改变库内部的 ELF 布局。
+alphaSkia 的两项依赖需要一起更新，确保 Java 包装层与 JNI 库属于同一版本。alphaTab 1.8.4 的官方 POM 仍声明 alphaSkia 3.4.135；项目使用上述两个显式依赖覆盖为 3.5.147。3.4.135 的 64 位 ELF 仅按 4 KB 对齐；修改 APK 的 ZIP 对齐无法改变库内部的 ELF 布局。
+
+## 简谱八度点修正
+
+历史版本 alphaTab 1.6.1 对低于基准音、相差整数八度的音符多计算一个下加点，例如 C3 应为单下加点，却显示为双下加点。项目升级至包含该修正的官方 1.8.4：其简谱实现使用 `floor((displayValue - oneNoteValue) / 12)` 计算八度距离，C3 相对 C4 的结果为 −1。OpenMusic 按标准 Maven 坐标引用官方发布包，保留 MPL-2.0 许可证与上游归属。
 
 ## 已完成的静态验证
 
@@ -56,6 +61,7 @@ zipalign -c -P 16 -v 4 app-debug.apk
 
 - [Android：支持 16 KB 页面大小](https://developer.android.com/guide/practices/page-sizes)
 - [alphaSkia 官方仓库与版本规则](https://github.com/CoderLine/alphaSkia)
-- [alphaTab 1.6.1 发布 POM](https://repo.maven.apache.org/maven2/net/alphatab/alphaTab/1.6.1/alphaTab-1.6.1.pom)
+- [alphaTab 1.8.4 发布 POM](https://repo.maven.apache.org/maven2/net/alphatab/alphaTab/1.8.4/alphaTab-1.8.4.pom)
+- [alphaTab 1.8.4 官方源码包](https://repo.maven.apache.org/maven2/net/alphatab/alphaTab/1.8.4/alphaTab-1.8.4-sources.jar)
 - [alphaSkia-android 3.5.147 AAR](https://repo.maven.apache.org/maven2/net/alphatab/alphaSkia-android/3.5.147/alphaSkia-android-3.5.147.aar)
 - [alphaSkia 3.5.147 JAR](https://repo.maven.apache.org/maven2/net/alphatab/alphaSkia/3.5.147/alphaSkia-3.5.147.jar)

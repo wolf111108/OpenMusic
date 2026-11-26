@@ -95,7 +95,7 @@ class NumberedScoreAdapterTest {
         val destinations = numbered.tracks.flatMap { it.staves.toList() }.flatMap { it.bars.toList() }
             .flatMap { it.voices.toList() }.flatMap { it.beats.toList() }.flatMap { it.notes.toList() }
             .filter { it.isTieDestination }
-        assertEquals(1, destinations.size)
+        assertEquals(1, destinations.toList().size)
         val destination = destinations.single()
         assertEquals(52, destination.realValue.toInt())
         assertEquals(destination.beat.voice.bar.staff, destination.tieOrigin!!.beat.voice.bar.staff)

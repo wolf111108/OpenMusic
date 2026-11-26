@@ -5,24 +5,26 @@
 | 项目 | 仓库配置 |
 |---|---|
 | Android 最低版本 | Android 8.0，API 26 |
-| compileSdk / targetSdk | 35 / 35 |
-| Android Gradle Plugin | 8.9.2 |
+| compileSdk / targetSdk | 36 / 35 |
+| Android Gradle Plugin | 8.10.1 |
 | Gradle Wrapper | 8.11.1，附带发行包 SHA-256 校验值 |
-| Kotlin / Compose 编译插件 | 2.1.21 |
+| Kotlin / Compose 编译插件 | 2.2.20 |
 | Java 字节码目标 | 17 |
 | Compose BOM | 2025.04.00 |
-| alphaTab Android | 1.6.1 |
+| AndroidX Core KTX | 1.17.0 |
+| alphaTab Android | 1.8.4 |
+| alphaSkia / alphaSkia-android | 3.5.147，显式覆盖 alphaTab 的传递版本 |
 | 应用 ID | `io.github.openmusic` |
 
 版本由仓库构建文件固定。安装 [Android Studio](https://developer.android.com/studio)，在 **SDK Manager** 中安装：
 
-- Android SDK Platform 35。
+- Android SDK Platform 36。
 - Android SDK Build-Tools 35.0.0。
 - Android SDK Platform-Tools。
 
 Gradle 运行环境建议 JDK 17。Android Studio 的 JBR 17／21 也适用；在 **Settings → Build, Execution, Deployment → Build Tools → Gradle → Gradle JDK** 中选中对应 JDK。项目自带 Wrapper，直接使用 `gradlew.bat`。首次同步需要访问 Google Maven、Maven Central 和 Gradle 下载服务器。
 
-构建工具与 Java 的对应关系以 [AGP 8.9 官方说明](https://developer.android.com/build/releases/past-releases/agp-8-9-0-release-notes) 和 [Gradle 8.11.1 兼容性表](https://docs.gradle.org/8.11.1/userguide/compatibility.html) 为准。
+构建工具与 Java 的对应关系以 [AGP 8.10 官方说明](https://developer.android.com/build/releases/agp-8-10-0-release-notes) 和 [Gradle 8.11.1 兼容性表](https://docs.gradle.org/8.11.1/userguide/compatibility.html) 为准。编译需要 Platform 36；`targetSdk` 保持 35，Android 15 / API 35 模拟器仍可用于运行测试。
 
 ## 拉取和同步
 
@@ -141,7 +143,7 @@ USB 口连接 P45 时手机／平板作为主机。首次测试可先完成 APK 
 | `JAVA_HOME is not set` 或找不到 Java | 通过 `-JdkPath` 指定含 `bin\java.exe`、`bin\javac.exe` 的完整 JDK |
 | JDK 版本与 Gradle 不兼容 | 将 Gradle JDK 设为 JDK 17／JBR 21，使用仓库内 Wrapper |
 | `SDK location not found` | 在 Android Studio 打开项目，或设置 `ANDROID_HOME`／`local.properties` |
-| 缺少 `android-35`／Build-Tools | 在 SDK Manager 安装上面列出的组件后重试 |
+| 缺少 `android-36`／Build-Tools | 在 SDK Manager 安装上面列出的组件后重试 |
 | 依赖下载失败 | 检查当前网络、代理以及 IDE 与命令行的代理配置；保留仓库依赖版本 |
 | `adb devices` 显示 `unauthorized` | 解锁设备并接受 USB 调试授权；重插数据线 |
 | debug APK 覆盖安装提示签名冲突 | 确认是否来自另一台电脑的 debug 签名，先导出需要保存的数据 |

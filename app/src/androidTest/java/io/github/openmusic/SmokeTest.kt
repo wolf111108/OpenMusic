@@ -287,11 +287,14 @@ class SmokeTest {
     private fun rendererSnapshot(): RendererSnapshot? = compose.runOnUiThread {
         val view = findRenderer(compose.activity.window.decorView) ?: return@runOnUiThread null
         val score = view.api.score
-        val staves = score?.tracks?.flatMap { it.staves }.orEmpty()
-        val beats = staves.flatMap { it.bars }.flatMap { it.voices }.flatMap { it.beats }
+        // Convert alphaTab collections before flattening to keep Kotlin List semantics.
+        val staves = score?.tracks?.toList()?.flatMap { it.staves.toList() }.orEmpty()
+        val beats = staves.flatMap { it.bars.toList() }.flatMap { it.voices.toList() }
+            .flatMap { it.beats.toList() }
         val noteCount = beats.sumOf { it.notes.count() }
         val firstMeasurePitches = staves.flatMap { it.bars.firstOrNull()?.voices?.toList().orEmpty() }
-            .flatMap { it.beats }.flatMap { it.notes }.map { it.realValue.toInt() }.sorted()
+            .flatMap { it.beats.toList() }.flatMap { it.notes.toList() }
+            .map { it.realValue.toInt() }.sorted()
         val numberedMonophonic = staves.all { staff ->
             staff.bars.all { bar -> bar.voices.withIndex().all { (index, voice) ->
                 voice.beats.all { beat -> beat.notes.count() <= 1 && (index == 0 || beat.notes.none()) }

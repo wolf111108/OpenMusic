@@ -92,7 +92,7 @@ private fun rendererSettings(settings: Settings = Settings()) = settings.apply {
     display.scale = 0.9
     // The app already shows score metadata above this viewport. Suppress alphaTab's
     // duplicate page header so a short landscape viewport starts with musical notation.
-    // These public 1.6.1 switches leave score.title/data and all staff/effect notation intact.
+    // These public switches leave score.title/data and all staff/effect notation intact.
     listOf(
         NotationElement.ScoreTitle,
         NotationElement.ScoreSubTitle,

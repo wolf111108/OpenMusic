@@ -15,7 +15,7 @@ val copyThirdPartyNotices by tasks.registering(Copy::class) {
 }
 android {
     namespace = "io.github.openmusic"
-    compileSdk = 35
+    compileSdk = 36
     defaultConfig {
         applicationId = "io.github.openmusic"
         minSdk = 26
@@ -46,7 +46,7 @@ kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarg
 dependencies {
     implementation(project(":core"))
     implementation(platform("androidx.compose:compose-bom:2025.04.00"))
-    implementation("androidx.core:core-ktx:1.16.0")
+    implementation("androidx.core:core-ktx:1.17.0")
     implementation("androidx.activity:activity-compose:1.10.1")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.0")
@@ -57,7 +57,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
-    implementation("net.alphatab:alphaTab:1.6.1")
+    implementation("net.alphatab:alphaTab:1.8.4")
     // Same Java API with 16 KiB-aligned native libraries; see docs/native-compatibility.md.
     implementation("net.alphatab:alphaSkia:3.5.147")
     implementation("net.alphatab:alphaSkia-android:3.5.147")

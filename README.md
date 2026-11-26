@@ -23,7 +23,7 @@
 ## Windows 快速开始
 
 1. 安装 Git、[Android Studio](https://developer.android.com/studio) 和 JDK 17。Android Studio 自带的兼容 JBR 也可用于运行构建；源码字节码目标为 Java 17。
-2. 在 Android Studio 的 SDK Manager 安装 **Android SDK Platform 35、Build-Tools 35.0.0、Platform-Tools**。
+2. 在 Android Studio 的 SDK Manager 安装 **Android SDK Platform 36、Build-Tools 35.0.0、Platform-Tools**。项目使用 `compileSdk 36`、`targetSdk 35`；API 35 模拟器用于运行验证。
 3. 拉取仓库，在 Android Studio 中打开仓库根目录，等待 Gradle 同步；也可使用 PowerShell：
 
 ```powershell
@@ -108,4 +108,4 @@ P45 连接方案：**电钢琴 USB TO HOST（USB Type-B）→ 支持数据传输
 
 提交到 `main` 后，[GitHub Actions](https://github.com/wolf111108/OpenMusic/actions) 运行核心与导入测试、MIDI 字节流测试、实际 alphaTab 时值一致性测试、Android Lint，并生成 `OpenMusic-debug-apk` 构建产物。后续模拟器任务检查谱面加载、简谱切换、示范暂停和模拟输入，上传截图与报告。以对应提交的 Actions 结果确认远程执行状态。
 
-仓库使用固定的 Gradle、Kotlin、Android 插件和谱面依赖版本；原生库单独锁定至支持 16 KB 对齐的兼容版本，见 [原生库兼容性记录](docs/native-compatibility.md)。构建与运行验证详情见 [验证记录](docs/verification.md)。
+仓库使用固定的 Gradle、Kotlin、Android 插件和谱面依赖版本。谱面采用官方 alphaTab 1.8.4，其中包含低音 C3 简谱八度点的修正；原生库单独锁定至支持 16 KB 对齐的 alphaSkia 3.5.147，见 [原生库兼容性记录](docs/native-compatibility.md)。构建与运行验证详情见 [验证记录](docs/verification.md)。

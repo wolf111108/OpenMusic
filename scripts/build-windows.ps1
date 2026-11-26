@@ -78,7 +78,7 @@ try {
             }
         }
         if ([string]::IsNullOrWhiteSpace($env:ANDROID_HOME)) {
-            throw 'Android SDK not found. Install SDK Platform 35 and Build-Tools 35.0.0 in Android Studio, then open this project or set ANDROID_HOME.'
+            throw 'Android SDK not found. Install SDK Platform 36 and Build-Tools 35.0.0 in Android Studio, then open this project or set ANDROID_HOME.'
         }
     }
 
