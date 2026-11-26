@@ -87,9 +87,9 @@ fun ScoreRenderer(
 
 private fun rendererSettings(settings: Settings = Settings()) = settings.apply {
     display.layoutMode = LayoutMode.Page
-    // Four aligned numbered lines (melody + a left-hand triad) fit the short phone
-    // landscape viewport while keeping every note and its octave dots visible.
-    display.scale = 0.9
+    // alphaTab 1.8.4 needs 0.85 to fit the complete four-line numbered system
+    // (melody + a left-hand triad), including octave dots and brace, in phone landscape.
+    display.scale = 0.85
     // The app already shows score metadata above this viewport. Suppress alphaTab's
     // duplicate page header so a short landscape viewport starts with musical notation.
     // These public switches leave score.title/data and all staff/effect notation intact.
@@ -197,7 +197,7 @@ private class RendererBridge {
 
     private fun position(attached: AlphaTabView, force: Boolean = false) {
         if (!ready || view !== attached) return
-        // alphaTab 1.6.1 uses 960 ticks per quarter (midi/MidiUtils.kt, QuarterTime).
+        // alphaTab 1.8.4 uses 960 ticks per quarter, verified by timing-alignment tests.
         // MidiUtils is internal in its Android artifact, so keep the pinned format value here.
         val tick = positionQn * ALPHATAB_TICKS_PER_QUARTER
         if (!force && tick == lastTick) return
