@@ -1,0 +1,63 @@
+{
+  "schema_version": "0.1.0",
+  "score_id": "demo_piano_001",
+  "metadata": {
+    "title": "示例钢琴片段",
+    "instrument": "piano",
+    "source_type": "image",
+    "source_sha256": null,
+    "transcriber": "manual_demo"
+  },
+  "parts": [
+    {
+      "id": "piano",
+      "instrument": "piano",
+      "staves": [
+        {"id": "RH", "clef": "treble", "index": 1},
+        {"id": "LH", "clef": "bass", "index": 2}
+      ]
+    }
+  ],
+  "measures": [
+    {
+      "id": "m001",
+      "number": 1,
+      "time_signature": {"numerator": 4, "denominator": 4},
+      "key_signature_fifths": 0,
+      "tempo_bpm": 80,
+      "is_pickup": false,
+      "events": [
+        {
+          "id": "n001", "kind": "note", "part_id": "piano", "staff_id": "RH", "voice": 1,
+          "onset_qn": "0/1", "duration_qn": "1/1",
+          "pitch": {"step": "C", "alter": 0, "octave": 4, "midi": 60},
+          "tie": "none", "source": {"page": 1, "bbox_norm": [0.15, 0.18, 0.03, 0.05]},
+          "confidence": 0.98, "reviewed": true
+        },
+        {
+          "id": "n002", "kind": "note", "part_id": "piano", "staff_id": "RH", "voice": 1,
+          "onset_qn": "1/1", "duration_qn": "1/1",
+          "pitch": {"step": "D", "alter": 0, "octave": 4, "midi": 62},
+          "tie": "none", "source": {"page": 1, "bbox_norm": [0.31, 0.18, 0.03, 0.05]},
+          "confidence": 0.96, "reviewed": true
+        },
+        {
+          "id": "n003", "kind": "note", "part_id": "piano", "staff_id": "RH", "voice": 1,
+          "onset_qn": "2/1", "duration_qn": "2/1",
+          "pitch": {"step": "E", "alter": 0, "octave": 4, "midi": 64},
+          "tie": "none", "source": {"page": 1, "bbox_norm": [0.48, 0.16, 0.03, 0.05]},
+          "confidence": 0.99, "reviewed": true
+        },
+        {
+          "id": "n004", "kind": "note", "part_id": "piano", "staff_id": "LH", "voice": 1,
+          "onset_qn": "0/1", "duration_qn": "4/1",
+          "pitch": {"step": "G", "alter": 0, "octave": 3, "midi": 55},
+          "tie": "none", "source": {"page": 1, "bbox_norm": [0.15, 0.49, 0.03, 0.05]},
+          "confidence": 0.98, "reviewed": true
+        }
+      ]
+    }
+  ],
+  "annotations": [],
+  "playback_structure": {"repeats": [], "tempo_changes": []}
+}

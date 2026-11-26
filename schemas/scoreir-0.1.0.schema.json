@@ -1,0 +1,468 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/wolf111108/OpenMusic/blob/main/schemas/scoreir-0.1.0.schema.json",
+  "title": "OpenMusic ScoreIR 0.1.0",
+  "description": "Machine-readable concert-pitch score. Structural JSON validation is followed by musical semantic validation in core.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "score_id",
+    "metadata",
+    "parts",
+    "measures"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.1.0"
+    },
+    "score_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]{1,100}$"
+    },
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    },
+    "parts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/part"
+      },
+      "minItems": 1,
+      "maxItems": 8
+    },
+    "measures": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/measure"
+      },
+      "minItems": 1,
+      "maxItems": 2048
+    },
+    "annotations": {
+      "type": "array",
+      "items": {},
+      "minItems": 0
+    },
+    "playback_structure": {
+      "$ref": "#/$defs/playback"
+    }
+  },
+  "$defs": {
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "title"
+      ],
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "instrument": {
+          "type": "string"
+        },
+        "composer": {
+          "type": "string"
+        },
+        "source_type": {
+          "type": "string"
+        },
+        "source_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "transcriber": {
+          "type": "string"
+        }
+      }
+    },
+    "part": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "staves"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]{1,100}$"
+        },
+        "instrument": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "staves": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/staff"
+          },
+          "minItems": 1,
+          "maxItems": 2
+        }
+      }
+    },
+    "staff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]{1,100}$"
+        },
+        "clef": {
+          "enum": [
+            "treble",
+            "bass",
+            "alto",
+            "tenor"
+          ]
+        },
+        "index": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2
+        }
+      }
+    },
+    "time_signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "properties": {
+        "numerator": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        },
+        "denominator": {
+          "enum": [
+            1,
+            2,
+            4,
+            8,
+            16
+          ]
+        }
+      }
+    },
+    "pitch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "step",
+        "octave",
+        "midi"
+      ],
+      "properties": {
+        "step": {
+          "enum": [
+            "C",
+            "D",
+            "E",
+            "F",
+            "G",
+            "A",
+            "B"
+          ]
+        },
+        "alter": {
+          "type": "integer",
+          "minimum": -2,
+          "maximum": 2
+        },
+        "octave": {
+          "type": "integer",
+          "minimum": -1,
+          "maximum": 9
+        },
+        "midi": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 127
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "properties": {
+        "page": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "bbox_norm": {
+          "anyOf": [
+            {
+              "type": "array",
+              "maxItems": 0
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "minItems": 4,
+              "maxItems": 4
+            }
+          ]
+        }
+      }
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "part_id",
+        "staff_id",
+        "onset_qn",
+        "duration_qn"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]{1,100}$"
+        },
+        "kind": {
+          "enum": [
+            "note",
+            "rest"
+          ]
+        },
+        "part_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]{1,100}$"
+        },
+        "staff_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]{1,100}$"
+        },
+        "voice": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4
+        },
+        "onset_qn": {
+          "type": "string",
+          "pattern": "^[0-9]+(?:/[1-9][0-9]*)?$",
+          "maxLength": 24,
+          "description": "Exact quarter-note units. Positive duration is checked by semantic validator."
+        },
+        "duration_qn": {
+          "type": "string",
+          "pattern": "^[0-9]+(?:/[1-9][0-9]*)?$",
+          "maxLength": 24,
+          "description": "Exact quarter-note units. Positive duration is checked by semantic validator."
+        },
+        "pitch": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/pitch"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tie": {
+          "enum": [
+            "none",
+            "start",
+            "stop",
+            "continue"
+          ]
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/source"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reviewed": {
+          "type": "boolean"
+        },
+        "fingering": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "velocity": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 127
+        }
+      }
+    },
+    "measure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "number",
+        "events"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]{1,100}$"
+        },
+        "number": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "time_signature": {
+          "$ref": "#/$defs/time_signature"
+        },
+        "key_signature_fifths": {
+          "type": "integer",
+          "minimum": -7,
+          "maximum": 7
+        },
+        "tempo_bpm": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 20,
+              "maximum": 300
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "is_pickup": {
+          "type": "boolean"
+        },
+        "duration_qn": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9]+(?:/[1-9][0-9]*)?$",
+              "maxLength": 24,
+              "description": "Exact quarter-note units. Positive duration is checked by semantic validator."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/event"
+          },
+          "minItems": 0,
+          "maxItems": 30000
+        }
+      }
+    },
+    "playback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "properties": {
+        "repeats": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/repeat"
+          },
+          "minItems": 0,
+          "maxItems": 1024
+        },
+        "tempo_changes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/tempo_change"
+          },
+          "minItems": 0,
+          "maxItems": 4096
+        }
+      }
+    },
+    "repeat": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "start_measure_id",
+        "end_measure_id"
+      ],
+      "properties": {
+        "start_measure_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]{1,100}$"
+        },
+        "end_measure_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]{1,100}$"
+        },
+        "times": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 8
+        }
+      }
+    },
+    "tempo_change": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "measure_id",
+        "tempo_bpm"
+      ],
+      "properties": {
+        "measure_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]{1,100}$"
+        },
+        "onset_qn": {
+          "type": "string",
+          "pattern": "^[0-9]+(?:/[1-9][0-9]*)?$",
+          "maxLength": 24,
+          "description": "Exact quarter-note units. Positive duration is checked by semantic validator."
+        },
+        "tempo_bpm": {
+          "type": "number",
+          "minimum": 20,
+          "maximum": 300
+        }
+      }
+    }
+  }
+}

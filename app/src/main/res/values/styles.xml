@@ -1,0 +1,11 @@
+<resources>
+    <style name="Base.Theme.OpenMusic" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">#F3F6FB</item>
+        <item name="android:windowActionModeOverlay">true</item>
+    </style>
+    <style name="Theme.OpenMusic" parent="Base.Theme.OpenMusic">
+        <item name="android:navigationBarColor">#162A45</item>
+    </style>
+</resources>

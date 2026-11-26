@@ -1,0 +1,385 @@
+{
+  "schema_version": "0.1.0",
+  "score_id": "openmusic_rhythm_study",
+  "metadata": {
+    "title": "节奏小练习 · 连音与反复",
+    "instrument": "piano",
+    "composer": "OpenMusic",
+    "source_type": "manual"
+  },
+  "parts": [
+    {
+      "id": "piano",
+      "instrument": "piano",
+      "name": "钢琴",
+      "staves": [
+        {
+          "id": "RH",
+          "clef": "treble",
+          "index": 1
+        },
+        {
+          "id": "LH",
+          "clef": "bass",
+          "index": 2
+        }
+      ]
+    }
+  ],
+  "measures": [
+    {
+      "id": "pickup",
+      "number": 0,
+      "time_signature": {
+        "numerator": 4,
+        "denominator": 4
+      },
+      "tempo_bpm": 80,
+      "is_pickup": true,
+      "duration_qn": "1/1",
+      "events": [
+        {
+          "id": "p_r1",
+          "kind": "note",
+          "part_id": "piano",
+          "staff_id": "RH",
+          "voice": 1,
+          "onset_qn": "0/1",
+          "duration_qn": "1/3",
+          "tie": "none",
+          "reviewed": true,
+          "pitch": {
+            "step": "C",
+            "alter": 0,
+            "octave": 4,
+            "midi": 60
+          }
+        },
+        {
+          "id": "p_r2",
+          "kind": "note",
+          "part_id": "piano",
+          "staff_id": "RH",
+          "voice": 1,
+          "onset_qn": "1/3",
+          "duration_qn": "1/3",
+          "tie": "none",
+          "reviewed": true,
+          "pitch": {
+            "step": "D",
+            "alter": 0,
+            "octave": 4,
+            "midi": 62
+          }
+        },
+        {
+          "id": "p_r3",
+          "kind": "note",
+          "part_id": "piano",
+          "staff_id": "RH",
+          "voice": 1,
+          "onset_qn": "2/3",
+          "duration_qn": "1/3",
+          "tie": "none",
+          "reviewed": true,
+          "pitch": {
+            "step": "E",
+            "alter": 0,
+            "octave": 4,
+            "midi": 64
+          }
+        },
+        {
+          "id": "p_l",
+          "kind": "rest",
+          "part_id": "piano",
+          "staff_id": "LH",
+          "voice": 1,
+          "onset_qn": "0/1",
+          "duration_qn": "1/1",
+          "tie": "none",
+          "reviewed": true
+        }
+      ]
+    },
+    {
+      "id": "a",
+      "number": 1,
+      "time_signature": {
+        "numerator": 4,
+        "denominator": 4
+      },
+      "tempo_bpm": 80,
+      "events": [
+        {
+          "id": "a_r1",
+          "kind": "note",
+          "part_id": "piano",
+          "staff_id": "RH",
+          "voice": 1,
+          "onset_qn": "0/1",
+          "duration_qn": "3/2",
+          "tie": "none",
+          "reviewed": true,
+          "pitch": {
+            "step": "G",
+            "alter": 0,
+            "octave": 4,
+            "midi": 67
+          }
+        },
+        {
+          "id": "a_r2",
+          "kind": "note",
+          "part_id": "piano",
+          "staff_id": "RH",
+          "voice": 1,
+          "onset_qn": "3/2",
+          "duration_qn": "1/2",
+          "tie": "none",
+          "reviewed": true,
+          "pitch": {
+            "step": "F",
+            "alter": 0,
+            "octave": 4,
+            "midi": 65
+          }
+        },
+        {
+          "id": "a_r3",
+          "kind": "note",
+          "part_id": "piano",
+          "staff_id": "RH",
+          "voice": 1,
+          "onset_qn": "2/1",
+          "duration_qn": "2/1",
+          "tie": "start",
+          "reviewed": true,
+          "pitch": {
+            "step": "E",
+            "alter": 0,
+            "octave": 4,
+            "midi": 64
+          }
+        },
+        {
+          "id": "a_l1",
+          "kind": "note",
+          "part_id": "piano",
+          "staff_id": "LH",
+          "voice": 1,
+          "onset_qn": "0/1",
+          "duration_qn": "4/1",
+          "tie": "none",
+          "reviewed": true,
+          "pitch": {
+            "step": "C",
+            "alter": 0,
+            "octave": 3,
+            "midi": 48
+          }
+        },
+        {
+          "id": "a_l2",
+          "kind": "note",
+          "part_id": "piano",
+          "staff_id": "LH",
+          "voice": 1,
+          "onset_qn": "0/1",
+          "duration_qn": "4/1",
+          "tie": "none",
+          "reviewed": true,
+          "pitch": {
+            "step": "G",
+            "alter": 0,
+            "octave": 3,
+            "midi": 55
+          }
+        }
+      ]
+    },
+    {
+      "id": "b",
+      "number": 2,
+      "time_signature": {
+        "numerator": 4,
+        "denominator": 4
+      },
+      "events": [
+        {
+          "id": "b_r1",
+          "kind": "note",
+          "part_id": "piano",
+          "staff_id": "RH",
+          "voice": 1,
+          "onset_qn": "0/1",
+          "duration_qn": "1/1",
+          "tie": "stop",
+          "reviewed": true,
+          "pitch": {
+            "step": "E",
+            "alter": 0,
+            "octave": 4,
+            "midi": 64
+          }
+        },
+        {
+          "id": "b_rest",
+          "kind": "rest",
+          "part_id": "piano",
+          "staff_id": "RH",
+          "voice": 1,
+          "onset_qn": "1/1",
+          "duration_qn": "1/1",
+          "tie": "none",
+          "reviewed": true
+        },
+        {
+          "id": "b_r2",
+          "kind": "note",
+          "part_id": "piano",
+          "staff_id": "RH",
+          "voice": 1,
+          "onset_qn": "2/1",
+          "duration_qn": "1/1",
+          "tie": "none",
+          "reviewed": true,
+          "pitch": {
+            "step": "D",
+            "alter": 0,
+            "octave": 4,
+            "midi": 62
+          }
+        },
+        {
+          "id": "b_r3",
+          "kind": "note",
+          "part_id": "piano",
+          "staff_id": "RH",
+          "voice": 1,
+          "onset_qn": "3/1",
+          "duration_qn": "1/1",
+          "tie": "none",
+          "reviewed": true,
+          "pitch": {
+            "step": "C",
+            "alter": 0,
+            "octave": 4,
+            "midi": 60
+          }
+        },
+        {
+          "id": "b_l1",
+          "kind": "note",
+          "part_id": "piano",
+          "staff_id": "LH",
+          "voice": 1,
+          "onset_qn": "0/1",
+          "duration_qn": "4/1",
+          "tie": "none",
+          "reviewed": true,
+          "pitch": {
+            "step": "C",
+            "alter": 0,
+            "octave": 3,
+            "midi": 48
+          }
+        }
+      ]
+    },
+    {
+      "id": "ending",
+      "number": 3,
+      "time_signature": {
+        "numerator": 4,
+        "denominator": 4
+      },
+      "events": [
+        {
+          "id": "end_r1",
+          "kind": "note",
+          "part_id": "piano",
+          "staff_id": "RH",
+          "voice": 1,
+          "onset_qn": "0/1",
+          "duration_qn": "4/1",
+          "tie": "none",
+          "reviewed": true,
+          "pitch": {
+            "step": "C",
+            "alter": 0,
+            "octave": 4,
+            "midi": 60
+          }
+        },
+        {
+          "id": "end_r2",
+          "kind": "note",
+          "part_id": "piano",
+          "staff_id": "RH",
+          "voice": 1,
+          "onset_qn": "0/1",
+          "duration_qn": "4/1",
+          "tie": "none",
+          "reviewed": true,
+          "pitch": {
+            "step": "E",
+            "alter": 0,
+            "octave": 4,
+            "midi": 64
+          }
+        },
+        {
+          "id": "end_r3",
+          "kind": "note",
+          "part_id": "piano",
+          "staff_id": "RH",
+          "voice": 1,
+          "onset_qn": "0/1",
+          "duration_qn": "4/1",
+          "tie": "none",
+          "reviewed": true,
+          "pitch": {
+            "step": "G",
+            "alter": 0,
+            "octave": 4,
+            "midi": 67
+          }
+        },
+        {
+          "id": "end_l",
+          "kind": "note",
+          "part_id": "piano",
+          "staff_id": "LH",
+          "voice": 1,
+          "onset_qn": "0/1",
+          "duration_qn": "4/1",
+          "tie": "none",
+          "reviewed": true,
+          "pitch": {
+            "step": "C",
+            "alter": 0,
+            "octave": 3,
+            "midi": 48
+          }
+        }
+      ]
+    }
+  ],
+  "playback_structure": {
+    "repeats": [
+      {
+        "start_measure_id": "a",
+        "end_measure_id": "b",
+        "times": 2
+      }
+    ],
+    "tempo_changes": [
+      {
+        "measure_id": "b",
+        "onset_qn": "2/1",
+        "tempo_bpm": 100
+      }
+    ]
+  }
+}
