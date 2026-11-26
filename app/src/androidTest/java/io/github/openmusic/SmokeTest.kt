@@ -6,6 +6,8 @@ import alphaTab.AlphaTabView
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.graphics.Bitmap
+import android.graphics.Rect
+import android.graphics.RectF
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
@@ -79,12 +81,14 @@ class SmokeTest {
         val rotatedRender = watchRender()
         changeOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE, Configuration.ORIENTATION_LANDSCAPE)
         awaitRenderer(numbered = true, watch = rotatedRender)
+        awaitReadableFirstBar()
         compose.onNodeWithText("▶  开始").assertIsDisplayed()
         saveScreenshot("03-phone-landscape-numbered")
 
         val staffRender = watchRender()
-        compose.onNodeWithText("五线谱").performScrollTo().performClick()
+        compose.onNodeWithText("五线谱").performClick()
         awaitRenderer(numbered = false, watch = staffRender)
+        awaitReadableFirstBar()
         compose.onNodeWithText("五线谱").assertIsSelected()
         saveScreenshot("04-phone-landscape-staff")
     }
@@ -142,6 +146,21 @@ class SmokeTest {
         compose.onNodeWithText("Ⅱ  暂停").performClick()
         awaitText("已暂停")
         saveScreenshot("07-waiting-after-first-note")
+
+        val rotatedRender = watchRender()
+        changeOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE, Configuration.ORIENTATION_LANDSCAPE)
+        awaitRenderer(numbered = false, watch = rotatedRender)
+        awaitReadableFirstBar()
+        compose.onNodeWithContentDescription("模拟琴键 D4").assertIsDisplayed()
+        compose.onNodeWithText("▶  开始").performClick()
+        awaitText("Ⅱ  暂停")
+        awaitText("目标音：62")
+        compose.onNodeWithContentDescription("模拟琴键 D4").performTouchInput { click() }
+        awaitText("目标音：64")
+        compose.onNodeWithText("Ⅱ  暂停").performClick()
+        awaitText("已暂停", substring = true)
+        awaitReadableFirstBar()
+        saveScreenshot("08-landscape-test-keyboard")
     }
 
     private fun openOriginalFromToday() {
@@ -151,9 +170,9 @@ class SmokeTest {
         compose.onNodeWithText(SAMPLE_TITLE).assertIsDisplayed()
     }
 
-    private fun awaitText(text: String) {
+    private fun awaitText(text: String, substring: Boolean = false) {
         compose.waitUntil(TIMEOUT_MS) {
-            compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithText(text, substring = substring).fetchSemanticsNodes().isNotEmpty()
         }
     }
 
@@ -209,7 +228,9 @@ class SmokeTest {
     private fun awaitRenderer(numbered: Boolean, watch: RenderWatch? = null): RendererSnapshot {
         compose.waitUntil(TIMEOUT_MS) {
             rendererSnapshot()?.let { snapshot ->
-                snapshot.title == SAMPLE_TITLE && snapshot.measureCount == 8 && snapshot.staffCount == 2 &&
+                snapshot.title == SAMPLE_TITLE && snapshot.measureCount == 8 &&
+                    (if (numbered) snapshot.staffCount >= 2 && snapshot.numberedMonophonic else snapshot.staffCount == 2) &&
+                    snapshot.noteCount == 53 && snapshot.firstMeasurePitches == listOf(48, 52, 55, 60, 62, 64, 67) &&
                     (if (numbered) snapshot.numbered else snapshot.standard) && snapshot.finished && snapshot.hasBarBounds &&
                     snapshot.width > 0 && snapshot.height > 0 &&
                     (watch == null || snapshot.view !== watch.view || watch.completions.get() > 0)
@@ -219,6 +240,22 @@ class SmokeTest {
         return checkNotNull(rendererSnapshot())
     }
 
+    private fun awaitReadableFirstBar() {
+        compose.waitUntil(TIMEOUT_MS) {
+            rendererSnapshot()?.let { snapshot ->
+                if (snapshot.numbered) {
+                    // Numbered chords use separate aligned lines. A short phone viewport must
+                    // show the first complete line and actual content from the following line.
+                    snapshot.firstBarStaffVisibility.firstOrNull()?.let { it >= 0.95 } == true &&
+                        snapshot.firstBarStaffVisibility.drop(1).any { it > 0.05 }
+                } else {
+                    snapshot.firstBarIntersectsViewport && snapshot.firstBarVisibleRatio >= 0.95 &&
+                        snapshot.nativeViewportHeight >= snapshot.firstBarHeightPixels - 2.0
+                }
+            } == true
+        }
+    }
+
     private data class RendererSnapshot(
         val view: AlphaTabView,
         val rawTitle: String?,
@@ -226,6 +263,9 @@ class SmokeTest {
         val hasScore: Boolean,
         val measureCount: Int,
         val staffCount: Int,
+        val noteCount: Int,
+        val firstMeasurePitches: List<Int>,
+        val numberedMonophonic: Boolean,
         val numbered: Boolean,
         val standard: Boolean,
         val finished: Boolean,
@@ -237,6 +277,12 @@ class SmokeTest {
         val shown: Boolean,
         val staffSystemCount: Int,
         val firstBarBounds: String?,
+        val nativeViewportBounds: String?,
+        val nativeViewportHeight: Int,
+        val firstBarHeightPixels: Double,
+        val firstBarIntersectsViewport: Boolean,
+        val firstBarVisibleRatio: Double,
+        val firstBarStaffVisibility: List<Double>,
         val tick: Double,
     )
 
@@ -244,12 +290,47 @@ class SmokeTest {
         val view = findRenderer(compose.activity.window.decorView) ?: return@runOnUiThread null
         val score = view.api.score
         val staves = score?.tracks?.flatMap { it.staves }.orEmpty()
+        val beats = staves.flatMap { it.bars }.flatMap { it.voices }.flatMap { it.beats }
+        val noteCount = beats.sumOf { it.notes.count() }
+        val firstMeasurePitches = staves.flatMap { it.bars.firstOrNull()?.voices?.toList().orEmpty() }
+            .flatMap { it.beats }.flatMap { it.notes }.map { it.realValue.toInt() }.sorted()
+        val numberedMonophonic = staves.all { staff ->
+            staff.bars.all { bar -> bar.voices.withIndex().all { (index, voice) ->
+                voice.beats.all { beat -> beat.notes.count() <= 1 && (index == 0 || beat.notes.none()) }
+            } }
+        }
         val lookup = view.api.boundsLookup
-        val barBounds = lookup?.takeIf { it.isFinished }?.findMasterBarByIndex(0.0)?.realBounds
+        val masterBounds = lookup?.takeIf { it.isFinished }?.findMasterBarByIndex(0.0)
+        val barBounds = masterBounds?.realBounds
+        // alphaTab's Android render surface draws layout bounds multiplied by display density.
+        // Its local visible rect includes the actual native ScrollView clipping and scroll offset.
+        val surface = view.findViewById<View>(net.alphatab.R.id.renderSurface)
+        val viewport = Rect()
+        val hasViewport = surface?.getLocalVisibleRect(viewport) == true
+        val density = view.resources.displayMetrics.density
+        fun visibleFraction(rect: RectF): Double {
+            val visible = RectF(rect)
+            return if (hasViewport && rect.width() > 0 && rect.height() > 0 && visible.intersect(RectF(viewport))) {
+                (visible.width() * visible.height() / (rect.width() * rect.height())).toDouble()
+            } else 0.0
+        }
+        val barPixels = barBounds?.let { RectF((it.x * density).toFloat(), (it.y * density).toFloat(),
+            ((it.x + it.w) * density).toFloat(), ((it.y + it.h) * density).toFloat()) }
+        val intersection = barPixels?.let(::RectF)
+        val intersects = hasViewport && intersection?.intersect(RectF(viewport)) == true
+        val visibleRatio = if (intersects && barPixels != null && barPixels.width() > 0 && barPixels.height() > 0) {
+            (intersection!!.width() * intersection.height() / (barPixels.width() * barPixels.height())).toDouble()
+        } else 0.0
+        val staffVisibility = masterBounds?.bars?.toList()?.sortedBy { it.visualBounds.y }?.map {
+            val b = it.visualBounds
+            visibleFraction(RectF((b.x * density).toFloat(), (b.y * density).toFloat(),
+                ((b.x + b.w) * density).toFloat(), ((b.y + b.h) * density).toFloat()))
+        }.orEmpty()
         RendererSnapshot(
             // alphaTab preserves display spacing by changing ordinary spaces to NBSP.
             view, score?.title, score?.title?.replace('\u00a0', ' '), score != null,
             score?.masterBars?.count() ?: 0, staves.size,
+            noteCount, firstMeasurePitches, numberedMonophonic,
             staves.isNotEmpty() && staves.all { it.showNumbered && !it.showStandardNotation },
             staves.isNotEmpty() && staves.all { it.showStandardNotation && !it.showNumbered },
             lookup?.isFinished == true && lookup.staffSystems.any(),
@@ -257,6 +338,8 @@ class SmokeTest {
             view.width, view.height, view.api.renderer.width, view.isAttachedToWindow, view.isShown,
             lookup?.staffSystems?.count() ?: 0,
             barBounds?.let { "x=${it.x},y=${it.y},w=${it.w},h=${it.h}" },
+            if (hasViewport) viewport.toShortString() else null, if (hasViewport) viewport.height() else 0,
+            barPixels?.height()?.toDouble() ?: 0.0, intersects, visibleRatio, staffVisibility,
             view.api.tickPosition,
         )
     }
@@ -284,9 +367,14 @@ class SmokeTest {
                     "hasView=${snapshot != null}\nhasScore=${snapshot?.hasScore}\n" +
                     "rawTitle=${snapshot?.rawTitle?.replace("\u00a0", "\\u00a0")}\n" +
                     "title=${snapshot?.title}\nmeasures=${snapshot?.measureCount}\n" +
+                    "noteCount=${snapshot?.noteCount}\nfirstMeasurePitches=${snapshot?.firstMeasurePitches}\n" +
+                    "numberedMonophonic=${snapshot?.numberedMonophonic}\n" +
                     "staves=${snapshot?.staffCount}\nnumbered=${snapshot?.numbered}\nstandard=${snapshot?.standard}\n" +
                     "renderFinished=${snapshot?.finished}\nhasBarBounds=${snapshot?.hasBarBounds}\n" +
                     "staffSystems=${snapshot?.staffSystemCount}\nfirstBarBounds=${snapshot?.firstBarBounds}\n" +
+                    "nativeViewport=${snapshot?.nativeViewportBounds}\nnativeViewportHeight=${snapshot?.nativeViewportHeight}\n" +
+                    "firstBarHeightPixels=${snapshot?.firstBarHeightPixels}\nfirstBarIntersectsViewport=${snapshot?.firstBarIntersectsViewport}\n" +
+                    "firstBarVisibleRatio=${snapshot?.firstBarVisibleRatio}\nfirstBarStaffVisibility=${snapshot?.firstBarStaffVisibility}\n" +
                     "view=${snapshot?.width}x${snapshot?.height}\nrendererWidth=${snapshot?.rendererWidth}\n" +
                     "attached=${snapshot?.attached}\nshown=${snapshot?.shown}\ntick=${snapshot?.tick}\n"
             Log.i("OpenMusicSmoke", "Snapshot $name:\n$metadata")

@@ -32,6 +32,7 @@ flowchart TD
 | `MidiInputController` | Android MIDI 服务、设备连接、字节流解码、原始日志 |
 | `NativeAudioTransport` | 原生 PCM 合成、节拍与音符调度、音频播放位置 |
 | `ScoreRenderer` | 原生 alphaTab 视图、五线谱／简谱切换、外部驱动游标 |
+| `NumberedScoreAdapter` | 简谱展示副本，按声部与和弦音分行并保留全部音符和时值 |
 
 ## 2. ScoreIR 是唯一导入语义源
 
@@ -45,6 +46,12 @@ flowchart TD
 - 同一展开顺序的 MusicXML，用于谱面显示。
 
 完整字段、规模限制和未来生产端接口见 [ScoreIR 0.1.0 契约](scoreir.md)。原始 PDF／JPG 和识谱服务处于该接口的上游，当前应用无需模型密钥或后端。
+
+### 谱面展示适配
+
+alphaTab 1.6.1 的简谱引擎只渲染每个谱表的第一个声部、每个音组的第一个音。`NumberedScoreAdapter` 使用公开模型序列化接口生成独立的展示副本，将原谱表的声部与和弦拆为按节拍对齐的单音音线，空白位置补等时值休止。延音链优先保持在同一音线，以保留和弦变位时的延音关系。五线谱继续使用原始导入模型，播放与评分继续使用核心 `CompiledScore`。
+
+应用顶栏显示曲名，原生谱面关闭重复的标题与作者头部；MusicXML 只在首次速度及实际变速处输出速度标记。低高度横屏使用紧凑控制区，谱面保留独立的原生滚动视口。
 
 ## 3. 统一练习时间线
 

@@ -22,6 +22,7 @@ internal object MusicXmlWriter {
         out.append("</part-list>\n")
         document.parts.forEachIndexed { partIndex, part ->
             out.append("<part id=\"P_${part.id}\">\n")
+            var lastWrittenTempo: Double? = null
             measures.forEachIndexed { displayIndex, expanded ->
                 val measure = document.measures[expanded.sourceIndex]
                 out.append("<measure number=\"${displayIndex + 1}\" id=\"m_p${partIndex + 1}_${measure.id}_${expanded.occurrence}\"${if (measure.isPickup) " implicit=\"yes\"" else ""}>\n")
@@ -35,9 +36,17 @@ internal object MusicXmlWriter {
                 out.append("</attributes>\n")
                 if (partIndex == 0) {
                     val bpm = tempo.bpmAt(expanded.start.toDouble())
-                    out.append("<direction placement=\"above\"><direction-type><metronome><beat-unit>quarter</beat-unit><per-minute>${number(bpm)}</per-minute></metronome></direction-type><sound tempo=\"${number(bpm)}\"/></direction>\n")
+                    // Compare in expanded playback order: a repeat can restore the initial
+                    // speed after an in-measure change on the preceding pass.
+                    if (lastWrittenTempo != bpm) {
+                        out.append("<direction placement=\"above\"><direction-type><metronome><beat-unit>quarter</beat-unit><per-minute>${number(bpm)}</per-minute></metronome></direction-type><sound tempo=\"${number(bpm)}\"/></direction>\n")
+                        lastWrittenTempo = bpm
+                    }
                     document.playbackStructure.tempoChanges.filter { it.measureId == measure.id && Qn.parse(it.onsetQn) > Qn.ZERO }.sortedBy { Qn.parse(it.onsetQn) }.forEach { change ->
-                        out.append("<direction><direction-type><metronome><beat-unit>quarter</beat-unit><per-minute>${number(change.tempoBpm)}</per-minute></metronome></direction-type><offset>${ticks(Qn.parse(change.onsetQn))}</offset><sound tempo=\"${number(change.tempoBpm)}\"/></direction>\n")
+                        if (lastWrittenTempo != change.tempoBpm) {
+                            out.append("<direction><direction-type><metronome><beat-unit>quarter</beat-unit><per-minute>${number(change.tempoBpm)}</per-minute></metronome></direction-type><offset>${ticks(Qn.parse(change.onsetQn))}</offset><sound tempo=\"${number(change.tempoBpm)}\"/></direction>\n")
+                            lastWrittenTempo = change.tempoBpm
+                        }
                     }
                 }
                 var firstLane = true

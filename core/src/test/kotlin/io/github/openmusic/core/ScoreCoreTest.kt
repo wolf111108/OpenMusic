@@ -49,6 +49,46 @@ class ScoreCoreTest {
         assertEquals(3.0, score.notes.single().durationSeconds, 1e-9)
     }
 
+    @Test fun musicXmlTempoMarksAppearOnlyWhenEffectiveTempoChanges() {
+        fun tempoMarks(score: CompiledScore): List<Pair<Double, Double>> {
+            val xml = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(score.musicXml.byteInputStream())
+            val bars = (xml.getElementsByTagName("part").item(0) as org.w3c.dom.Element).getElementsByTagName("measure")
+            return (0 until bars.length).flatMap { index ->
+                val bar = bars.item(index) as org.w3c.dom.Element
+                val divisions = bar.getElementsByTagName("divisions").item(0).textContent.toDouble()
+                val directions = bar.getElementsByTagName("direction")
+                (0 until directions.length).map { directionIndex ->
+                    val direction = directions.item(directionIndex) as org.w3c.dom.Element
+                    val offset = direction.getElementsByTagName("offset").item(0)?.textContent?.toDouble() ?: 0.0
+                    val bpm = direction.getElementsByTagName("per-minute").item(0).textContent.toDouble()
+                    score.measures[index].startQn + offset / divisions to bpm
+                }
+            }
+        }
+        val steady = compile(
+            measure("a", listOf(note("a1", duration = "4/1")), 72.0),
+            measure("b", listOf(note("b1", duration = "4/1")), 72.0),
+            measure("c", listOf(note("c1", duration = "4/1")), 72.0),
+            playback = PlaybackStructure(tempoChanges = listOf(TempoChange("b", "2/1", 72.0))),
+        )
+        assertEquals(listOf(0.0 to 72.0), tempoMarks(steady))
+        assertEquals(10.0, steady.durationSeconds, 1e-9)
+
+        val repeated = compile(
+            measure("a", listOf(note("a1", duration = "4/1")), 72.0),
+            measure("b", listOf(note("b1", duration = "4/1")), null),
+            playback = PlaybackStructure(
+                repeats = listOf(RepeatRegion("a", "b", 2)),
+                tempoChanges = listOf(TempoChange("b", "2/1", 96.0)),
+            ),
+        )
+        val changes = listOf(0.0 to 72.0, 6.0 to 96.0, 8.0 to 72.0, 14.0 to 96.0)
+        assertEquals(changes, tempoMarks(repeated))
+        assertEquals(changes, repeated.tempoMap.points.map { it.quarter to it.bpm })
+        assertEquals(listOf(0.0, 4.0, 8.0, 12.0), repeated.notes.map { it.onsetQn })
+        assertEquals(12.5, repeated.durationSeconds, 1e-9)
+    }
+
     @Test fun repeatExpandsOccurrencesAndResetsSourceTempo() {
         val score = compile(measure("a", listOf(note("n1")), 60.0), measure("b", listOf(note("n2", 64)), 120.0), playback = PlaybackStructure(repeats = listOf(RepeatRegion("a", "b", 2))))
         assertEquals(listOf("a", "b", "a", "b"), score.measures.map { it.sourceMeasureId })

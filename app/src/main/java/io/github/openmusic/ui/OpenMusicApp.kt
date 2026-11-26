@@ -438,6 +438,11 @@ private fun PracticePage(
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val compact = maxHeight < 600.dp
         val narrow = maxWidth < 700.dp
+        if (compact && maxWidth > maxHeight && state.selectedScore != null) {
+            CompactPracticePage(state, onAction, showInlineDetails = !narrow,
+                onSettings = { showSettings = true }, onSeek = { showSeek = true }, scorePanel = scorePanel)
+            return@BoxWithConstraints
+        }
         Column(
             Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()
                 .padding(horizontal = if (compact) 10.dp else 16.dp, vertical = if (compact) 4.dp else 10.dp),
@@ -524,6 +529,101 @@ private fun PracticePage(
     if (showSeek) SeekDialog(state, onAction) { showSeek = false }
 }
 
+/** Short landscape windows give the score the space between a single toolbar and transport. */
+@Composable
+private fun CompactPracticePage(
+    state: OpenMusicUiState,
+    onAction: (UiAction) -> Unit,
+    showInlineDetails: Boolean,
+    onSettings: () -> Unit,
+    onSeek: () -> Unit,
+    scorePanel: @Composable (Modifier) -> Unit,
+) {
+    var showModes by remember { mutableStateOf(false) }
+    var showKeyboard by remember(state.simulatorEnabled) { mutableStateOf(state.simulatorEnabled) }
+    val feedback = if (state.mode == PracticeModeUi.WAIT && !state.canEvaluate)
+        "连接 MIDI，或在设置中开启测试键盘。" else state.feedback
+    Column(
+        Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)
+            .padding(horizontal = 8.dp, vertical = 2.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Row(Modifier.fillMaxWidth().height(44.dp), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            TextButton(onClick = { onAction(UiAction.Navigate(AppScreen.TODAY)) },
+                contentPadding = PaddingValues(0.dp),
+                modifier = Modifier.width(36.dp).semantics { contentDescription = "返回今日" }) {
+                Text("‹", fontSize = 28.sp)
+            }
+            Column(Modifier.weight(1f)) {
+                Text(state.selectedScore?.title.orEmpty(), fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(if (showInlineDetails) state.inputLabel else "${state.mode.label} · ${state.bpm} BPM · ${state.hands.label}",
+                    color = MutedInk, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            if (showInlineDetails) {
+                Box {
+                    TextButton(onClick = { showModes = true }, enabled = !state.running,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)) {
+                        Text("${state.mode.label} ▾", fontSize = 12.sp)
+                    }
+                    DropdownMenu(expanded = showModes, onDismissRequest = { showModes = false }) {
+                        PracticeModeUi.entries.forEach { mode ->
+                            DropdownMenuItem(text = { Text(mode.label) }, onClick = {
+                                onAction(UiAction.SetMode(mode)); showModes = false
+                            })
+                        }
+                    }
+                }
+            }
+            NotationUi.entries.forEach { notation ->
+                FilterChip(selected = state.notation == notation,
+                    onClick = { onAction(UiAction.SetNotation(notation)) },
+                    label = { Text(notation.label, fontSize = 12.sp) })
+            }
+            OutlinedButton(onClick = onSettings,
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) {
+                Text(if (showInlineDetails) "${state.bpm} BPM · ${state.hands.label} · 设置" else "设置", fontSize = 12.sp)
+            }
+        }
+        Surface(
+            Modifier.weight(1f).fillMaxWidth(),
+            shape = RoundedCornerShape(10.dp), color = Color.White,
+            border = BorderStroke(1.dp, Color(0xFFE0E8F3)),
+        ) { scorePanel(Modifier.fillMaxSize()) }
+        if (state.simulatorEnabled && showKeyboard) SimulatorKeyboard(state, onAction, compact = true)
+        Row(Modifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { onAction(UiAction.PlayPause) },
+                enabled = !state.busy && (state.mode != PracticeModeUi.WAIT || state.canEvaluate),
+                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 6.dp)) {
+                Text(if (state.running) "Ⅱ  暂停" else "▶  开始")
+            }
+            TextButton(onClick = { onAction(UiAction.Restart) }, contentPadding = PaddingValues(horizontal = 8.dp)) {
+                Text("重来", fontSize = 12.sp)
+            }
+            Column(Modifier.weight(1f).clickable(enabled = !state.running, onClick = onSeek)) {
+                Text("第 ${state.currentMeasure} 小节 · ${formatBeat(state.currentBeat)} 拍 · ${state.transportLabel}" +
+                    if (state.loop) " · 循环 ${state.iteration}" else "",
+                    color = MutedInk, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(feedback, color = Ink, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                LinearProgressIndicator(
+                    progress = { if (state.totalSeconds > 0) (state.positionSeconds / state.totalSeconds).toFloat().coerceIn(0f, 1f) else 0f },
+                    modifier = Modifier.fillMaxWidth().padding(top = 3.dp).height(2.dp),
+                )
+            }
+            if (state.simulatorEnabled) {
+                TextButton(onClick = { showKeyboard = !showKeyboard }, contentPadding = PaddingValues(horizontal = 6.dp)) {
+                    Text(if (showKeyboard) "收起键盘" else "展开键盘", fontSize = 11.sp)
+                }
+            }
+            TextButton(onClick = { onAction(UiAction.Stop) }, contentPadding = PaddingValues(horizontal = 8.dp)) {
+                Text("结束", fontSize = 12.sp)
+            }
+        }
+    }
+}
+
 @Composable
 private fun PracticeSettingsDialog(state: OpenMusicUiState, onAction: (UiAction) -> Unit, onDismiss: () -> Unit) {
     var from by remember(state.startMeasure) { mutableStateOf(state.startMeasure.toString()) }
@@ -537,6 +637,32 @@ private fun PracticeSettingsDialog(state: OpenMusicUiState, onAction: (UiAction)
         title = { Text("片段与练习设置") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (state.notation == NotationUi.NUMBERED) {
+                    Text("简谱按声部与和弦音分行，纵向对齐的数字同时演奏。", color = MutedInk, fontSize = 12.sp)
+                }
+                Text("模式与速度", fontWeight = FontWeight.SemiBold)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    PracticeModeUi.entries.forEach { mode ->
+                        FilterChip(selected = state.mode == mode, enabled = !state.running,
+                            onClick = { onAction(UiAction.SetMode(mode)) }, label = { Text(mode.label) })
+                    }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    StepButton("−", "降低速度", enabled = !state.running && state.bpm > 30) {
+                        onAction(UiAction.SetBpm((state.bpm - 5).coerceAtLeast(30)))
+                    }
+                    Text("${state.bpm} BPM", fontWeight = FontWeight.SemiBold, fontSize = 20.sp)
+                    StepButton("＋", "提高速度", enabled = !state.running && state.bpm < 240) {
+                        onAction(UiAction.SetBpm((state.bpm + 5).coerceAtMost(240)))
+                    }
+                }
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    HandsUi.entries.forEach { hands ->
+                        FilterChip(selected = state.hands == hands, enabled = !state.running,
+                            onClick = { onAction(UiAction.SetHands(hands)) }, label = { Text(hands.label) })
+                    }
+                }
+                HorizontalDivider()
                 Text("按展开后的演奏小节选择片段，共 $maxMeasure 小节。", color = MutedInk, fontSize = 13.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedTextField(value = from, onValueChange = { if (it.length <= 6) from = it.filter(Char::isDigit) },
@@ -590,8 +716,20 @@ private fun SeekDialog(state: OpenMusicUiState, onAction: (UiAction) -> Unit, on
 }
 
 @Composable
-private fun SimulatorKeyboard(state: OpenMusicUiState, onAction: (UiAction) -> Unit) {
-    val currentOnAction by rememberUpdatedState(onAction)
+private fun SimulatorKeyboard(state: OpenMusicUiState, onAction: (UiAction) -> Unit, compact: Boolean = false) {
+    if (compact) {
+        Row(Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(8.dp))
+            .background(Color(0xFFE9EEF5)).padding(horizontal = 6.dp, vertical = 3.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("测试 C${state.simulatorOctave}", color = PracticeAmber, fontSize = 11.sp)
+            TextButton(onClick = { onAction(UiAction.SetSimulatorOctave((state.simulatorOctave - 1).coerceAtLeast(1))) },
+                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)) { Text("低八度", fontSize = 11.sp) }
+            TextButton(onClick = { onAction(UiAction.SetSimulatorOctave((state.simulatorOctave + 1).coerceAtMost(7))) },
+                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)) { Text("高八度", fontSize = 11.sp) }
+            SimulatorKeyRow(state, onAction, Modifier.weight(1f))
+        }
+        return
+    }
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color(0xFFE9EEF5)).padding(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("测试键盘 · 模拟输入", color = PracticeAmber, fontSize = 11.sp, modifier = Modifier.weight(1f))
@@ -601,8 +739,15 @@ private fun SimulatorKeyboard(state: OpenMusicUiState, onAction: (UiAction) -> U
             TextButton(onClick = { onAction(UiAction.SetSimulatorOctave((state.simulatorOctave + 1).coerceAtMost(7))) },
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp), modifier = Modifier.height(28.dp)) { Text("高八度") }
         }
-        val first = (state.simulatorOctave + 1) * 12
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        SimulatorKeyRow(state, onAction, Modifier.fillMaxWidth())
+    }
+}
+
+@Composable
+private fun SimulatorKeyRow(state: OpenMusicUiState, onAction: (UiAction) -> Unit, modifier: Modifier) {
+    val currentOnAction by rememberUpdatedState(onAction)
+    val first = (state.simulatorOctave + 1) * 12
+    Row(modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             (first..first + 12).forEach { pitch ->
                 val black = pitch % 12 in listOf(1, 3, 6, 8, 10)
                 val pressed = pitch in state.activeKeys
@@ -622,7 +767,6 @@ private fun SimulatorKeyboard(state: OpenMusicUiState, onAction: (UiAction) -> U
                     contentAlignment = Alignment.Center,
                 ) { Text(noteName(pitch), color = if (black || pressed) Color.White else Ink, fontSize = 11.sp) }
             }
-        }
     }
 }
 

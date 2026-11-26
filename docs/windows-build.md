@@ -70,6 +70,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build-windows.ps1 -SkipTests
 
 ## 单独执行命令
 
+直接运行 Wrapper 前，先按「拉取和同步」设置当前终端的 `JAVA_HOME` 与 SDK 路径。构建脚本自动发现的 JDK 仅在脚本运行期间生效；需要继续自动发现 JDK 时，可使用带 `-Install` 的构建脚本安装。
+
 ```powershell
 # 核心语义、编译和评分测试
 .\gradlew.bat :core:test
@@ -125,7 +127,7 @@ app\build\outputs\connected_android_test_additional_output\
 
 ```powershell
 & "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" devices
-.\gradlew.bat :app:installDebug
+powershell -ExecutionPolicy Bypass -File .\scripts\build-windows.ps1 -Install
 ```
 
 同一台电脑重复构建可以覆盖安装并保留应用数据。更换电脑后出现签名冲突时，先导出需要保留的记录和原始曲谱，再处理旧安装。卸载应用会删除其私有目录；导出的记录 JSON 当前供归档与分析使用。

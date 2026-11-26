@@ -16,6 +16,8 @@
 
 当前评分检查 **MIDI 音高与起音时刻**。按键持续时长、力度、踏板效果和演奏表现尚未纳入评分。应用通过手机／平板播放简单合成示范音，电钢琴的原声音色继续由电钢琴输出。
 
+简谱按声部与和弦音分行，纵向对齐的数字同时演奏；全部音符保留，音线之间的休止按原时值补齐。手机横屏采用紧凑控制栏，速度、左右手和选段参数集中到「设置」，为谱面保留显示空间。
+
 本版直接消费 **ScoreIR 0.1.0**。它是本项目定义的版本化中间格式；PDF、JPG、OCR、AI 识谱、音频转谱和原始 MusicXML／MIDI 文件导入属于后续生产端。未来转换工具按 [ScoreIR 导入契约](docs/scoreir.md) 输出即可接入。吉他、长笛等实音乐谱可以用于跟谱练习，专用指法、六线谱及麦克风识音需要后续扩展。
 
 ## Windows 快速开始
@@ -45,7 +47,7 @@ app\build\outputs\apk\debug\app-debug.apk
 把 APK 复制到手机／平板后安装，或连接已开启 USB 调试的设备执行：
 
 ```powershell
-.\gradlew.bat :app:installDebug
+powershell -ExecutionPolicy Bypass -File .\scripts\build-windows.ps1 -Install
 ```
 
 构建依赖首次需要联网下载。安装后的跟谱、示范、导入及练习数据保存都在本机完成。详细环境设置、测试命令和常见错误见 [Windows 构建说明](docs/windows-build.md)。

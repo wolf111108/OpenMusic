@@ -4,6 +4,7 @@ package io.github.openmusic.platform
 
 import alphaTab.AlphaTabView
 import alphaTab.LayoutMode
+import alphaTab.NotationElement
 import alphaTab.PlayerMode
 import alphaTab.ScrollMode
 import alphaTab.Settings
@@ -45,7 +46,9 @@ fun ScoreRenderer(
             value = withContext(Dispatchers.Default) {
                 ScoreLoader.loadScoreFromBytes(
                     Uint8Array(musicXml.toByteArray(Charsets.UTF_8).asUByteArray()), rendererSettings(),
-                ).also { loaded ->
+                ).let { loaded ->
+                    if (numbered) NumberedScoreAdapter.adapt(loaded, rendererSettings()) else loaded
+                }.also { loaded ->
                     loaded.tracks.forEach { track ->
                         track.staves.forEach { staff ->
                             staff.showStandardNotation = !numbered
@@ -85,6 +88,18 @@ fun ScoreRenderer(
 private fun rendererSettings(settings: Settings = Settings()) = settings.apply {
     display.layoutMode = LayoutMode.Page
     display.scale = 1.0
+    // The app already shows score metadata above this viewport. Suppress alphaTab's
+    // duplicate page header so a short landscape viewport starts with musical notation.
+    // These public 1.6.1 switches leave score.title/data and all staff/effect notation intact.
+    listOf(
+        NotationElement.ScoreTitle,
+        NotationElement.ScoreSubTitle,
+        NotationElement.ScoreArtist,
+        NotationElement.ScoreAlbum,
+        NotationElement.ScoreWords,
+        NotationElement.ScoreMusic,
+        NotationElement.ScoreWordsAndMusic,
+    ).forEach { notation.elements.set(it, false) }
     player.playerMode = PlayerMode.EnabledExternalMedia
     player.enableCursor = true
     // While paused this option interpolates immediately to the supplied tick; it starts no timer.
