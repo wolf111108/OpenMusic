@@ -21,7 +21,13 @@ import kotlin.math.abs
 import kotlin.math.max
 
 data class RenderState(val musicXml: String = "", val positionQn: Double = 0.0)
-data class ExportRequest(val name: String, val text: String, val mimeType: String = "application/json")
+enum class ExportContent { TEXT, HISTORY }
+data class ExportRequest(
+    val name: String,
+    val text: String = "",
+    val mimeType: String = "application/json",
+    val content: ExportContent = ExportContent.TEXT,
+)
 
 class OpenMusicViewModel(application: Application) : AndroidViewModel(application) {
     private val store = LocalStore(application)
@@ -128,7 +134,10 @@ class OpenMusicViewModel(application: Application) : AndroidViewModel(applicatio
             runCatching { withContext(Dispatchers.IO) {
                 val output = getApplication<Application>().contentResolver.openOutputStream(uri)
                     ?: error("无法写入所选位置。")
-                output.use { it.write(request.text.toByteArray(Charsets.UTF_8)) }
+                output.use {
+                    if (request.content == ExportContent.HISTORY) store.exportSessionsTo(it)
+                    else it.write(request.text.toByteArray(Charsets.UTF_8))
+                }
             } }.onSuccess { mutableState.update { it.copy(message = "已导出 ${request.name}") } }
                 .onFailure { e -> mutableState.update { it.copy(error = "导出失败：${e.message}") } }
         }
@@ -146,7 +155,7 @@ class OpenMusicViewModel(application: Application) : AndroidViewModel(applicatio
                     .onFailure { e -> mutableState.update { it.copy(error = e.message) } }
             }
             UiAction.ExportExample -> scores.firstOrNull { it.builtIn }?.let { exports.tryEmit(ExportRequest("openmusic-example.scoreir.json", it.json)) }
-            UiAction.ExportHistory -> viewModelScope.launch { exports.emit(ExportRequest("openmusic-history.json", withContext(Dispatchers.IO) { store.exportSessions() })) }
+            UiAction.ExportHistory -> exports.tryEmit(ExportRequest("openmusic-history.json", content = ExportContent.HISTORY))
             UiAction.ExportMidiLog -> exports.tryEmit(ExportRequest("openmusic-midi-log.txt", state.value.midiLog.joinToString("\n"), "text/plain"))
             is UiAction.SetMode -> changeSettings { it.copy(mode = action.mode) }
             is UiAction.SetNotation -> mutableState.update { it.copy(notation = action.notation) }
@@ -437,7 +446,7 @@ class OpenMusicViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     private suspend fun refreshHistory() {
-        val records = withContext(Dispatchers.IO) { store.loadSessions() }
+        val records = withContext(Dispatchers.IO) { store.loadSessionSummaries() }
         val formatter = SimpleDateFormat("MM-dd HH:mm", Locale.getDefault())
         mutableState.update { it.copy(history = records.map { r -> SessionItemUi(r.id, r.scoreTitle, formatter.format(Date(r.startedAt)),
             PracticeModeUi.entries.firstOrNull { mode -> mode.name == r.mode }?.label ?: r.mode, r.bpm, r.durationSeconds, r.evaluated,

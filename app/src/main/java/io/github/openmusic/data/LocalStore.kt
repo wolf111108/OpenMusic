@@ -10,6 +10,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.io.InputStream
+import java.io.OutputStream
 import java.security.MessageDigest
 
 data class StoredScore(val id: String, val json: String, val compiled: CompiledScore, val builtIn: Boolean)
@@ -96,12 +98,25 @@ class LocalStore(private val context: Context) {
         writeAtomic(File(records, "${record.id}.json"), json.encodeToString(record))
     }
 
-    fun loadSessions(): List<SessionRecord> = records.listFiles().orEmpty()
-        .filter { it.extension == "json" }
-        .mapNotNull { runCatching { json.decodeFromString<SessionRecord>(it.readText()) }.getOrNull() }
-        .sortedByDescending { it.startedAt }
+    @Synchronized
+    fun loadSessionSummaries(): List<SessionSummary> = SessionArchive.loadSummaries(recordSources())
 
-    fun exportSessions(): String = json.encodeToString(loadSessions())
+    @Synchronized
+    fun exportSessionsTo(output: OutputStream) {
+        SessionArchive.exportSessionsTo(recordSources(), output)
+    }
+
+    /**
+     * AtomicFile.openRead restores legacy .bak files after an interrupted write. Include
+     * backup-only bases in discovery; an uncommitted .new file is not a saved session.
+     * The store lock serializes recovery with saveSession's AtomicFile writer.
+     */
+    private fun recordSources(): Sequence<() -> InputStream> = SessionArchive.recordFiles(records)
+        .asSequence()
+        .map { file ->
+            val open: () -> InputStream = { AtomicFile(file).openRead() }
+            open
+        }
 
     private fun writeAtomic(file: File, text: String) {
         val atomic = AtomicFile(file)

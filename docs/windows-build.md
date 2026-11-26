@@ -105,11 +105,13 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build-windows.ps1 -SkipTests
 
 `SmokeTest` 包含三条真实 Activity 流程：从今日进入原创样例并切换五线谱／简谱、示范游标前进后暂停、设备页测试键盘按下／松开并推进等待模式。测试同时检查 alphaTab 的已载入曲谱、渲染完成事件和小节边界，保存手机竖屏与横屏截图。等待依据实际状态和有限超时，完整执行结果以本次测试报告为准。
 
-```powershell
-& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" pull /sdcard/Android/data/io.github.openmusic/files/screenshots .\build\screenshots
+Gradle 会在卸载测试应用前收集 `additionalTestOutputDir`，文件保存在以下目录的设备子文件夹中：
+
+```text
+app\build\outputs\connected_android_test_additional_output\
 ```
 
-截图目录同时包含渲染元数据 `.txt`；界面测试报告位于 `app\build\reports\androidTests\connected\debug\index.html`。CI 使用模拟器执行同一命令并收集这些文件。模拟输入验证应用内事件通路，实际 USB 设备仍按真机清单验收。
+截图目录同时包含渲染元数据 `.txt`；界面测试报告位于 `app\build\reports\androidTests\connected\debug\index.html`。CI 使用模拟器执行同一命令并收集这些文件。通过其他 runner 直接运行且缺少输出参数时，截图回退到应用的外部 `screenshots` 目录，应在卸载应用前取出。模拟输入验证应用内事件通路，实际 USB 设备仍按真机清单验收。
 
 ## 安装到 Xiaomi 15 / REDMI K Pad
 

@@ -38,6 +38,10 @@ android {
     lint { abortOnError = true; checkReleaseBuilds = true }
 }
 tasks.named("preBuild").configure { dependsOn(copySampleScores, copyThirdPartyNotices) }
+tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+    inputs.files(rootProject.fileTree("samples") { include("*.json") })
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+}
 kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
 dependencies {
     implementation(project(":core"))

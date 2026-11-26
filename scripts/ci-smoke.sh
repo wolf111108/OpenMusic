@@ -3,7 +3,7 @@ set -u
 
 test_status=0
 ./gradlew :app:connectedDebugAndroidTest --stacktrace || test_status=$?
-mkdir -p app/build/screenshots
-adb pull /sdcard/Android/data/io.github.openmusic/files/screenshots/. app/build/screenshots/ || true
+# AGP collects additionalTestOutputDir before it uninstalls the test app.
+# Screenshots are in build/outputs/connected_android_test_additional_output/.
 adb logcat -d > app/build/smoke-logcat.txt || true
 exit "$test_status"

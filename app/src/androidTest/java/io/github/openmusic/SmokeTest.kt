@@ -9,9 +9,9 @@ import android.graphics.Bitmap
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
@@ -25,6 +25,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -114,14 +115,17 @@ class SmokeTest {
         compose.onNodeWithContentDescription("测试键盘").performScrollTo().performClick()
         compose.onNodeWithContentDescription("测试键盘").assertIsOn()
 
-        val key = compose.onNodeWithContentDescription("模拟琴键 C4").performScrollTo()
+        // A key lives inside a horizontal row within the vertical device list. Scroll the outer
+        // list explicitly after expanding it, so a touch cannot land on bottom navigation.
+        val key = deviceKeyInViewport("模拟琴键 C4")
+        saveScreenshot("06a-device-before-key-press")
         key.performTouchInput { down(center) }
         try {
-            key.assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "按下"))
+            awaitKeyState(key, "按下")
         } finally {
             key.performTouchInput { up() }
         }
-        key.assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "松开"))
+        awaitKeyState(key, "松开")
         saveScreenshot("06-device-test-keyboard")
 
         compose.onNodeWithText("今日").performClick()
@@ -150,6 +154,33 @@ class SmokeTest {
     private fun awaitText(text: String) {
         compose.waitUntil(TIMEOUT_MS) {
             compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
+        }
+    }
+
+    private fun deviceKeyInViewport(description: String): SemanticsNodeInteraction {
+        val list = compose.onNode(hasScrollToIndexAction())
+        list.performScrollToNode(hasContentDescription(description))
+        val key = compose.onNodeWithContentDescription(description)
+        val viewportBefore = list.fetchSemanticsNode().boundsInRoot
+        val keyBefore = key.fetchSemanticsNode().boundsInRoot
+        // Center within the scroll viewport when possible. At the end of the list ScrollBy
+        // clamps naturally; the bounds check below still requires the complete key to be visible.
+        list.performSemanticsAction(SemanticsActions.ScrollBy) { scroll ->
+            scroll(0f, keyBefore.center.y - viewportBefore.center.y)
+        }
+        compose.waitForIdle()
+        val viewport = list.fetchSemanticsNode().boundsInRoot
+        val bounds = key.fetchSemanticsNode().boundsInRoot
+        Log.i("OpenMusicSmoke", "Device key $description: bounds=$bounds, listViewport=$viewport")
+        key.assertIsDisplayed()
+        assertTrue("The whole key must be inside the device-list viewport, above navigation",
+            bounds.height > 0 && bounds.top >= viewport.top && bounds.bottom <= viewport.bottom)
+        return key
+    }
+
+    private fun awaitKeyState(key: SemanticsNodeInteraction, state: String) {
+        compose.waitUntil(TIMEOUT_MS) {
+            key.fetchSemanticsNode().config[SemanticsProperties.StateDescription] == state
         }
     }
 
@@ -190,7 +221,9 @@ class SmokeTest {
 
     private data class RendererSnapshot(
         val view: AlphaTabView,
-        val title: String,
+        val rawTitle: String?,
+        val title: String?,
+        val hasScore: Boolean,
         val measureCount: Int,
         val staffCount: Int,
         val numbered: Boolean,
@@ -199,22 +232,32 @@ class SmokeTest {
         val hasBarBounds: Boolean,
         val width: Int,
         val height: Int,
+        val rendererWidth: Double,
+        val attached: Boolean,
+        val shown: Boolean,
+        val staffSystemCount: Int,
+        val firstBarBounds: String?,
         val tick: Double,
     )
 
     private fun rendererSnapshot(): RendererSnapshot? = compose.runOnUiThread {
         val view = findRenderer(compose.activity.window.decorView) ?: return@runOnUiThread null
-        val score = view.api.score ?: return@runOnUiThread null
-        val staves = score.tracks.flatMap { it.staves }
+        val score = view.api.score
+        val staves = score?.tracks?.flatMap { it.staves }.orEmpty()
         val lookup = view.api.boundsLookup
         val barBounds = lookup?.takeIf { it.isFinished }?.findMasterBarByIndex(0.0)?.realBounds
         RendererSnapshot(
-            view, score.title, score.masterBars.count(), staves.size,
+            // alphaTab preserves display spacing by changing ordinary spaces to NBSP.
+            view, score?.title, score?.title?.replace('\u00a0', ' '), score != null,
+            score?.masterBars?.count() ?: 0, staves.size,
             staves.isNotEmpty() && staves.all { it.showNumbered && !it.showStandardNotation },
             staves.isNotEmpty() && staves.all { it.showStandardNotation && !it.showNumbered },
             lookup?.isFinished == true && lookup.staffSystems.any(),
             barBounds != null && barBounds.w > 0 && barBounds.h > 0,
-            view.width, view.height, view.api.tickPosition,
+            view.width, view.height, view.api.renderer.width, view.isAttachedToWindow, view.isShown,
+            lookup?.staffSystems?.count() ?: 0,
+            barBounds?.let { "x=${it.x},y=${it.y},w=${it.w},h=${it.h}" },
+            view.api.tickPosition,
         )
     }
 
@@ -234,19 +277,29 @@ class SmokeTest {
         instrumentation.waitForIdleSync()
         val screenshot = checkNotNull(instrumentation.uiAutomation.takeScreenshot()) { "System screenshot unavailable" }
         try {
-            val directory = checkNotNull(compose.activity.getExternalFilesDir("screenshots"))
-            check(directory.exists() || directory.mkdirs())
-            val output = File(directory, "$name.png")
-            output.outputStream().use { stream -> check(screenshot.compress(Bitmap.CompressFormat.PNG, 100, stream)) }
             val snapshot = rendererSnapshot()
-            File(directory, "$name.txt").writeText(
+            val metadata =
                 "orientation=${compose.activity.resources.configuration.orientation}\n" +
                     "image=${screenshot.width}x${screenshot.height}\n" +
+                    "hasView=${snapshot != null}\nhasScore=${snapshot?.hasScore}\n" +
+                    "rawTitle=${snapshot?.rawTitle?.replace("\u00a0", "\\u00a0")}\n" +
                     "title=${snapshot?.title}\nmeasures=${snapshot?.measureCount}\n" +
                     "staves=${snapshot?.staffCount}\nnumbered=${snapshot?.numbered}\nstandard=${snapshot?.standard}\n" +
                     "renderFinished=${snapshot?.finished}\nhasBarBounds=${snapshot?.hasBarBounds}\n" +
-                    "view=${snapshot?.width}x${snapshot?.height}\ntick=${snapshot?.tick}\n",
-            )
+                    "staffSystems=${snapshot?.staffSystemCount}\nfirstBarBounds=${snapshot?.firstBarBounds}\n" +
+                    "view=${snapshot?.width}x${snapshot?.height}\nrendererWidth=${snapshot?.rendererWidth}\n" +
+                    "attached=${snapshot?.attached}\nshown=${snapshot?.shown}\ntick=${snapshot?.tick}\n"
+            Log.i("OpenMusicSmoke", "Snapshot $name:\n$metadata")
+            // AGP/UTP copies this directory before uninstalling the APK. App external files are
+            // only the fallback for manual instrumentation without an additional-output argument.
+            val additionalOutput = InstrumentationRegistry.getArguments()
+                .getString("additionalTestOutputDir")?.takeIf { it.isNotBlank() }
+            val directory = if (additionalOutput != null) File(additionalOutput)
+                else checkNotNull(compose.activity.getExternalFilesDir("screenshots"))
+            check(directory.isDirectory || directory.mkdirs()) { "Cannot create screenshot output: $directory" }
+            val output = File(directory, "$name.png")
+            output.outputStream().use { stream -> check(screenshot.compress(Bitmap.CompressFormat.PNG, 100, stream)) }
+            File(directory, "$name.txt").writeText(metadata)
             Log.i("OpenMusicSmoke", "Screenshot: ${output.absolutePath}")
         } finally {
             screenshot.recycle()
