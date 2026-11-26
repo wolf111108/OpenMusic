@@ -87,7 +87,9 @@ fun ScoreRenderer(
 
 private fun rendererSettings(settings: Settings = Settings()) = settings.apply {
     display.layoutMode = LayoutMode.Page
-    display.scale = 1.0
+    // Four aligned numbered lines (melody + a left-hand triad) fit the short phone
+    // landscape viewport while keeping every note and its octave dots visible.
+    display.scale = 0.9
     // The app already shows score metadata above this viewport. Suppress alphaTab's
     // duplicate page header so a short landscape viewport starts with musical notation.
     // These public 1.6.1 switches leave score.title/data and all staff/effect notation intact.

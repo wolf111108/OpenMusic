@@ -3,6 +3,7 @@
 package io.github.openmusic
 
 import alphaTab.AlphaTabView
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.graphics.Bitmap
@@ -11,6 +12,7 @@ import android.graphics.RectF
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
+import android.view.accessibility.AccessibilityNodeInfo
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsNodeInteraction
@@ -60,7 +62,10 @@ class SmokeTest {
     @After
     fun keepFinalScreenForDiagnostics() {
         runCatching { saveScreenshot("last-${testName.methodName}") }
-            .onFailure { Log.w("OpenMusicSmoke", "Final screenshot unavailable", it) }
+            .onFailure {
+                if (it is ForegroundWindowFailure) throw it
+                Log.w("OpenMusicSmoke", "Final screenshot unavailable", it)
+            }
     }
 
     @Test
@@ -243,15 +248,8 @@ class SmokeTest {
     private fun awaitReadableFirstBar() {
         compose.waitUntil(TIMEOUT_MS) {
             rendererSnapshot()?.let { snapshot ->
-                if (snapshot.numbered) {
-                    // Numbered chords use separate aligned lines. A short phone viewport must
-                    // show the first complete line and actual content from the following line.
-                    snapshot.firstBarStaffVisibility.firstOrNull()?.let { it >= 0.95 } == true &&
-                        snapshot.firstBarStaffVisibility.drop(1).any { it > 0.05 }
-                } else {
-                    snapshot.firstBarIntersectsViewport && snapshot.firstBarVisibleRatio >= 0.95 &&
-                        snapshot.nativeViewportHeight >= snapshot.firstBarHeightPixels - 2.0
-                }
+                snapshot.firstBarIntersectsViewport && snapshot.firstBarVisibleRatio >= 0.95 &&
+                    snapshot.nativeViewportHeight >= snapshot.firstBarHeightPixels - 2.0
             } == true
         }
     }
@@ -355,9 +353,11 @@ class SmokeTest {
     }
 
     private fun saveScreenshot(name: String) {
+        ensureAppForeground(name)
         compose.waitForIdle()
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         instrumentation.waitForIdleSync()
+        ensureAppForeground(name)
         val screenshot = checkNotNull(instrumentation.uiAutomation.takeScreenshot()) { "System screenshot unavailable" }
         try {
             val snapshot = rendererSnapshot()
@@ -380,11 +380,7 @@ class SmokeTest {
             Log.i("OpenMusicSmoke", "Snapshot $name:\n$metadata")
             // AGP/UTP copies this directory before uninstalling the APK. App external files are
             // only the fallback for manual instrumentation without an additional-output argument.
-            val additionalOutput = InstrumentationRegistry.getArguments()
-                .getString("additionalTestOutputDir")?.takeIf { it.isNotBlank() }
-            val directory = if (additionalOutput != null) File(additionalOutput)
-                else checkNotNull(compose.activity.getExternalFilesDir("screenshots"))
-            check(directory.isDirectory || directory.mkdirs()) { "Cannot create screenshot output: $directory" }
+            val directory = screenshotDirectory()
             val output = File(directory, "$name.png")
             output.outputStream().use { stream -> check(screenshot.compress(Bitmap.CompressFormat.PNG, 100, stream)) }
             File(directory, "$name.txt").writeText(metadata)
@@ -392,6 +388,96 @@ class SmokeTest {
         } finally {
             screenshot.recycle()
         }
+    }
+
+    private class ForegroundWindowFailure(message: String, cause: Throwable) : AssertionError(message, cause)
+
+    /** Only the observed, explicitly named system Pixel Launcher ANR is recoverable here. */
+    @Suppress("DEPRECATION") // recycle remains required on older supported Android versions.
+    private fun ensureAppForeground(name: String) {
+        val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
+        automation.serviceInfo = automation.serviceInfo.apply {
+            flags = flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
+        }
+        var dismissedLauncher = false
+        var description = "No active accessibility window"
+        try {
+            compose.waitUntil(10_000L) {
+                val windows = automation.windows
+                val root = try {
+                    (windows.firstOrNull { it.isFocused } ?: windows.firstOrNull { it.isActive })?.root
+                        ?: automation.rootInActiveWindow
+                } finally {
+                    windows.forEach { it.recycle() }
+                }
+                val nodes = mutableListOf<AccessibilityNodeInfo>()
+                if (root != null) nodes += root
+                try {
+                    var index = 0
+                    while (index < nodes.size && nodes.size < 512) {
+                        val node = nodes[index++]
+                        for (child in 0 until node.childCount) node.getChild(child)?.let { nodes += it }
+                    }
+                    val packageName = root?.packageName?.toString()
+                    val texts = nodes.mapNotNull { it.text?.toString() }
+                        .map { it.replace('\u00a0', ' ').replace('’', '\'').trim() }
+                    description = "package=$packageName; window=${root?.windowId}; texts=${texts.joinToString(" | ")}"
+                    when {
+                        root == null -> false
+                        packageName == "io.github.openmusic" -> true
+                        packageName in setOf("android", "com.android.systemui") &&
+                            texts.any { it == "Pixel Launcher isn't responding" } -> {
+                            if (!dismissedLauncher) {
+                                saveRawScreenshot("$name-external-pixel-launcher", description)
+                                var close = nodes.firstOrNull { it.text?.toString()?.trim() == "Close app" && it.isEnabled }
+                                var parentDepth = 0
+                                while (close != null && !close.isClickable && parentDepth++ < 4) {
+                                    close = close.parent?.also { nodes += it }
+                                }
+                                check(close != null && close.windowId == root.windowId && close.isVisibleToUser &&
+                                    close.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+                                    "Cannot activate the specific Pixel Launcher Close app action"
+                                }
+                                dismissedLauncher = true
+                                Log.w("OpenMusicSmoke", "Dismissed external Pixel Launcher ANR only: $description")
+                            }
+                            false
+                        }
+                        else -> error("Unexpected foreground window; no action taken: $description")
+                    }
+                } finally {
+                    nodes.forEach { it.recycle() }
+                }
+            }
+        } catch (error: Throwable) {
+            runCatching { saveRawScreenshot("$name-blocked-foreground", description) }
+                .onFailure { Log.e("OpenMusicSmoke", "Failed to save original foreground screenshot", it) }
+            throw ForegroundWindowFailure("OpenMusic must own the foreground before capture. $description", error)
+        }
+    }
+
+    /** Takes an unmodified system screenshot without waiting on the app's UI thread. */
+    private fun saveRawScreenshot(name: String, details: String) {
+        val screenshot = checkNotNull(InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot())
+        try {
+            val directory = screenshotDirectory()
+            File(directory, "$name.png").outputStream().use {
+                check(screenshot.compress(Bitmap.CompressFormat.PNG, 100, it))
+            }
+            File(directory, "$name.txt").writeText(details)
+            Log.w("OpenMusicSmoke", "Original foreground screenshot $name: $details")
+        } finally {
+            screenshot.recycle()
+        }
+    }
+
+    private fun screenshotDirectory(): File {
+        val additionalOutput = InstrumentationRegistry.getArguments()
+            .getString("additionalTestOutputDir")?.takeIf { it.isNotBlank() }
+        val directory = if (additionalOutput != null) File(additionalOutput)
+            else checkNotNull(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir("screenshots"))
+        check(directory.isDirectory || directory.mkdirs()) { "Cannot create screenshot output: $directory" }
+        return directory
     }
 
     companion object {

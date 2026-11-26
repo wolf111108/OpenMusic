@@ -5,10 +5,12 @@ package io.github.openmusic.platform
 import alphaTab.Settings
 import alphaTab.collections.List as AlphaList
 import alphaTab.collections.Map as AlphaMap
-import alphaTab.model.Duration
+import alphaTab.model.Bar
 import alphaTab.model.JsonConverter
 import alphaTab.model.Score
 import alphaTab.model.Staff
+import alphaTab.model.Voice
+import kotlin.math.abs
 
 /**
  * alphaTab 1.6.1's NumberedBarRenderer draws only voice 0, and NumberedBeatGlyph
@@ -21,9 +23,11 @@ import alphaTab.model.Staff
 internal object NumberedScoreAdapter {
     fun adapt(source: Score, settings: Settings): Score {
         val encoded = JsonConverter.scoreToJsObject(source).node()
+        // Keep the original serialized staves available while earlier tracks are expanded.
+        val originalTrackStaves = encoded.array("tracks").toList().map { it.node().array("staves") }
         source.tracks.forEachIndexed { trackIndex, track ->
             val trackNode = encoded.array("tracks")[trackIndex].node()
-            val originalStaves = trackNode.array("staves")
+            val originalStaves = originalTrackStaves[trackIndex]
             val expandedStaves = AlphaList<Any?>()
             track.staves.forEachIndexed { staffIndex, staff ->
                 val staffNode = originalStaves[staffIndex].node()
@@ -38,13 +42,20 @@ internal object NumberedScoreAdapter {
                         val displayVoice = voiceNode?.copyNode() ?: AlphaMap()
                         val displayBeats = AlphaList<Any?>()
                         if (voice == null || voice.beats.length == 0.0 || voice.isEmpty) {
-                            // Missing voices still occupy a complete measure, including pickups.
-                            displayBeats.push(AlphaMap<String, Any?>().apply {
-                                set("notes", AlphaList<Any?>())
-                                set("duration", Duration.Whole.value.toDouble())
-                                set("isempty", false)
-                                set("overridedisplayduration", bar.masterBar.calculateDuration())
-                            })
+                            // NumberedBeatGlyph uses the duration enum for its dashes, ignoring
+                            // overrideDisplayDuration. Reuse this measure's actual rhythm so a
+                            // one-quarter pickup is also drawn as one quarter, rather than Whole.
+                            val rhythm = restRhythm(source, bar)
+                            val rhythmStaff = rhythm.bar.staff
+                            val rhythmNode = originalTrackStaves[rhythmStaff.track.index.toInt()][rhythmStaff.index.toInt()]
+                                .node().array("bars")[barIndex].node().array("voices")[rhythm.index.toInt()].node()
+                            rhythm.beats.forEachIndexed { beatIndex, beat ->
+                                displayBeats.push(rhythmNode.array("beats")[beatIndex].node().copyNode().apply {
+                                    set("notes", AlphaList<Any?>())
+                                    set("isempty", false)
+                                    set("overridedisplayduration", beat.playbackDuration)
+                                })
+                            }
                         } else {
                             voice.beats.forEachIndexed { beatIndex, beat ->
                                 val beatNode = voiceNode!!.array("beats")[beatIndex].node()
@@ -80,6 +91,17 @@ internal object NumberedScoreAdapter {
     }
 
     private data class Lane(val voiceIndex: Int, val lane: Int, val noteLanes: Map<Double, Int>)
+
+    private fun restRhythm(score: Score, bar: Bar): Voice {
+        val duration = bar.masterBar.calculateDuration()
+        fun complete(voice: Voice) = !voice.isEmpty && voice.beats.length > 0.0 &&
+            abs(voice.calculateDuration() - duration) < 1e-6
+        return bar.voices.firstOrNull(::complete)
+            ?: score.tracks.asSequence().flatMap { it.staves.asSequence() }
+                .mapNotNull { it.bars.getOrNull(bar.index.toInt()) }
+                .flatMap { it.voices.asSequence() }.firstOrNull(::complete)
+            ?: error("第 ${bar.index.toInt() + 1} 小节缺少完整节奏，无法生成正确时值的简谱休止符")
+    }
 
     private fun lanes(staff: Staff): List<Lane> {
         // Importing MusicXML voice 5 creates four empty voices before the real left hand.

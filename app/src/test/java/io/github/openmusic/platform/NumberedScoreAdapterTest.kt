@@ -8,6 +8,7 @@ import alphaTab.importer.ScoreLoader
 import alphaTab.midi.AlphaSynthMidiFileHandler
 import alphaTab.midi.MidiFile
 import alphaTab.midi.MidiFileGenerator
+import alphaTab.model.Duration
 import alphaTab.model.Score
 import io.github.openmusic.core.Pitch
 import io.github.openmusic.core.ScoreCodec
@@ -52,6 +53,29 @@ class NumberedScoreAdapterTest {
                 note("l3", 55, staff = "LH", onset = "1/1", duration = "1/1", voice = 3),
             )),
         ))
+    }
+
+    @Test fun missingVoiceInAOneQuarterPickupUsesAQuarterRestForBothDrawingAndTiming() {
+        val (_, numbered) = assertPreserved(document("one-quarter-rest",
+            ScoreMeasure("pickup", 0, tempoBpm = 60.0, isPickup = true, durationQn = "1/1", events = listOf(
+                note("pickup-r", 60),
+            )),
+            ScoreMeasure("bar", 1, events = listOf(
+                note("r1", 60, duration = "4/1"),
+                note("r2", 64, duration = "4/1", voice = 2),
+                note("l1", 48, duration = "4/1", staff = "LH"),
+            )),
+        ))
+        // The second right-hand voice is absent in the pickup but present in the next measure.
+        val missingVoice = numbered.tracks[0].staves[1].bars[0].voices[0]
+        assertEquals(1, missingVoice.beats.length.toInt())
+        val rest = missingVoice.beats[0]
+        assertTrue(rest.isRest)
+        assertFalse(rest.isEmpty)
+        assertEquals("NumberedBeatGlyph reads the enum for its visible duration", Duration.Quarter, rest.duration)
+        assertEquals(0.0, rest.dots, 0.0)
+        assertEquals(960.0, rest.displayDuration, 1e-6)
+        assertEquals(960.0, rest.playbackDuration, 1e-6)
     }
 
     @Test fun tiedPitchStaysOnItsLaneWhenItsPositionWithinAChordChanges() {
